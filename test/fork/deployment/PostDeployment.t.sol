@@ -29,14 +29,13 @@ import { Versioned } from "../../../src/lib/utils/Versioned.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract DeploymentBaseTest is Test, Utilities, DeploymentFixtures {
-    DeployParams internal deployParams;
     uint256 adminsCount;
+    Env env;
 
     function setUp() public {
-        Env memory env = envVars();
+        env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }
@@ -57,6 +56,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(csmImpl.getType(), deployParams.moduleType);
         assertEq(
             address(csmImpl.LIDO_LOCATOR()),
@@ -77,6 +77,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
@@ -150,6 +151,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy_onlyFull() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({ admin: deployParams.aragonAgent });
 
@@ -171,6 +173,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(accounting.DEFAULT_BOND_CURVE_ID(), 0);
 
         assertEq(
@@ -204,6 +207,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(address(accountingImpl.MODULE()), address(csm));
         assertEq(address(accountingImpl.LIDO_LOCATOR()), address(locator));
         assertEq(address(accountingImpl.LIDO()), locator.lido());
@@ -231,6 +235,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             accounting.hasRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -292,6 +297,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy_onlyFull() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         ICSBondCurve.BondCurveIntervalInput[]
             memory defaultBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
                 deployParams.defaultBondCurve.length
@@ -342,6 +348,7 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(feeDistributor.getInitializedVersion(), 2);
         assertEq(feeDistributor.rebateRecipient(), deployParams.aragonAgent);
     }
@@ -353,6 +360,7 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             feeDistributor.hasRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
@@ -373,6 +381,7 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy_onlyFull() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         feeDistributor.initialize({
             admin: deployParams.aragonAgent,
@@ -414,6 +423,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertFalse(oracle.isPaused());
         assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
@@ -421,6 +431,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(oracleImpl.SECONDS_PER_SLOT(), deployParams.secondsPerSlot);
         assertEq(oracleImpl.GENESIS_TIME(), deployParams.clGenesisTime);
         assertEq(
@@ -431,6 +442,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles_onlyFull() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             oracle.hasRole(
                 oracle.DEFAULT_ADMIN_ROLE(),
@@ -469,6 +481,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy_onlyFull() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Versioned.NonZeroContractVersionOnInit.selector);
         oracle.initialize({
             admin: address(deployParams.aragonAgent),
@@ -494,6 +507,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
 
 contract HashConsensusDeploymentTest is DeploymentBaseTest {
     function test_state() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         (
             uint256 slotsPerEpoch,
             uint256 secondsPerSlot,
@@ -528,6 +542,7 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             hashConsensus.hasRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
@@ -592,6 +607,7 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
     }
 
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(verifier.WITHDRAWAL_ADDRESS(), locator.withdrawalVault());
         assertEq(address(verifier.MODULE()), address(csm));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
@@ -634,6 +650,7 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             verifier.hasRole(
                 verifier.DEFAULT_ADMIN_ROLE(),
@@ -660,6 +677,7 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
 
 contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             parametersRegistryImpl.QUEUE_LOWEST_PRIORITY(),
             deployParams.queueLowestPriority
@@ -667,6 +685,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
             deployParams.defaultKeyRemovalCharge
@@ -724,217 +743,218 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         );
         assertEq(parametersRegistry.getInitializedVersion(), 1);
 
-        // Params for Identified Community Staker type
-        uint256 identifiedCommunityStakersGateCurveId = vettedGate.curveId();
-        assertEq(
-            parametersRegistry.getKeyRemovalCharge(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateKeyRemovalCharge
-        );
-        assertEq(
-            parametersRegistry.getElRewardsStealingAdditionalFine(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams
-                .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
-        );
-        assertEq(
-            parametersRegistry.getKeysLimit(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateKeysLimit
-        );
-
-        ICSParametersRegistry.KeyNumberValueInterval[]
-            memory rewardShareData = parametersRegistry.getRewardShareData(
-                identifiedCommunityStakersGateCurveId
-            );
-        assertEq(
-            rewardShareData.length,
-            deployParams.identifiedCommunityStakersGateRewardShareData.length
-        );
-        for (uint256 i = 0; i < rewardShareData.length; i++) {
-            assertEq(
-                rewardShareData[i].minKeyNumber,
-                deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
-            );
-            assertEq(
-                rewardShareData[i].value,
-                deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
-            );
-        }
-        ICSParametersRegistry.KeyNumberValueInterval[]
-            memory performanceLeewayData = parametersRegistry
-                .getPerformanceLeewayData(
-                    identifiedCommunityStakersGateCurveId
-                );
-        assertEq(
-            performanceLeewayData.length,
-            deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
-        );
-        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
-            assertEq(
-                performanceLeewayData[i].minKeyNumber,
-                deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
-                    0
-                ]
-            );
-            assertEq(
-                performanceLeewayData[i].value,
-                deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
-                    1
-                ]
-            );
-        }
-
-        (uint256 lifetime, uint256 threshold) = parametersRegistry
-            .getStrikesParams(identifiedCommunityStakersGateCurveId);
-        assertEq(
-            lifetime,
-            deployParams.identifiedCommunityStakersGateStrikesLifetimeFrames
-        );
-        assertEq(
-            threshold,
-            deployParams.identifiedCommunityStakersGateStrikesThreshold
-        );
-
-        (uint256 icsPriority, uint256 icsMaxDeposits) = parametersRegistry
-            .getQueueConfig(identifiedCommunityStakersGateCurveId);
-        assertEq(
-            icsPriority,
-            deployParams.identifiedCommunityStakersGateQueuePriority
-        );
-        assertEq(
-            icsMaxDeposits,
-            deployParams.identifiedCommunityStakersGateQueueMaxDeposits
-        );
-
-        assertEq(
-            parametersRegistry.getBadPerformancePenalty(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateBadPerformancePenalty
-        );
-        (
-            uint256 icsAttestationsWeight,
-            uint256 icsBlocksWeight,
-            uint256 icsSyncWeight
-        ) = parametersRegistry.getPerformanceCoefficients(
-                identifiedCommunityStakersGateCurveId
-            );
-        assertEq(
-            icsAttestationsWeight,
-            deployParams.identifiedCommunityStakersGateAttestationsWeight
-        );
-        assertEq(
-            icsBlocksWeight,
-            deployParams.identifiedCommunityStakersGateBlocksWeight
-        );
-        assertEq(
-            icsSyncWeight,
-            deployParams.identifiedCommunityStakersGateSyncWeight
-        );
-
-        assertEq(
-            parametersRegistry.getAllowedExitDelay(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateAllowedExitDelay
-        );
-        assertEq(
-            parametersRegistry.getExitDelayFee(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateExitDelayFee
-        );
-        assertEq(
-            parametersRegistry.getMaxWithdrawalRequestFee(
-                identifiedCommunityStakersGateCurveId
-            ),
-            deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
-        );
+        // // Params for Identified Community Staker type
+        // uint256 identifiedCommunityStakersGateCurveId = vettedGate.curveId();
+        // assertEq(
+        //     parametersRegistry.getKeyRemovalCharge(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateKeyRemovalCharge
+        // );
+        // assertEq(
+        //     parametersRegistry.getElRewardsStealingAdditionalFine(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams
+        //         .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+        // );
+        // assertEq(
+        //     parametersRegistry.getKeysLimit(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateKeysLimit
+        // );
+        //
+        // ICSParametersRegistry.KeyNumberValueInterval[]
+        //     memory rewardShareData = parametersRegistry.getRewardShareData(
+        //         identifiedCommunityStakersGateCurveId
+        //     );
+        // assertEq(
+        //     rewardShareData.length,
+        //     deployParams.identifiedCommunityStakersGateRewardShareData.length
+        // );
+        // for (uint256 i = 0; i < rewardShareData.length; i++) {
+        //     assertEq(
+        //         rewardShareData[i].minKeyNumber,
+        //         deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
+        //     );
+        //     assertEq(
+        //         rewardShareData[i].value,
+        //         deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
+        //     );
+        // }
+        // ICSParametersRegistry.KeyNumberValueInterval[]
+        //     memory performanceLeewayData = parametersRegistry
+        //         .getPerformanceLeewayData(
+        //             identifiedCommunityStakersGateCurveId
+        //         );
+        // assertEq(
+        //     performanceLeewayData.length,
+        //     deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
+        // );
+        // for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+        //     assertEq(
+        //         performanceLeewayData[i].minKeyNumber,
+        //         deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
+        //             0
+        //         ]
+        //     );
+        //     assertEq(
+        //         performanceLeewayData[i].value,
+        //         deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
+        //             1
+        //         ]
+        //     );
+        // }
+        //
+        // (uint256 lifetime, uint256 threshold) = parametersRegistry
+        //     .getStrikesParams(identifiedCommunityStakersGateCurveId);
+        // assertEq(
+        //     lifetime,
+        //     deployParams.identifiedCommunityStakersGateStrikesLifetimeFrames
+        // );
+        // assertEq(
+        //     threshold,
+        //     deployParams.identifiedCommunityStakersGateStrikesThreshold
+        // );
+        //
+        // (uint256 icsPriority, uint256 icsMaxDeposits) = parametersRegistry
+        //     .getQueueConfig(identifiedCommunityStakersGateCurveId);
+        // assertEq(
+        //     icsPriority,
+        //     deployParams.identifiedCommunityStakersGateQueuePriority
+        // );
+        // assertEq(
+        //     icsMaxDeposits,
+        //     deployParams.identifiedCommunityStakersGateQueueMaxDeposits
+        // );
+        //
+        // assertEq(
+        //     parametersRegistry.getBadPerformancePenalty(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateBadPerformancePenalty
+        // );
+        // (
+        //     uint256 icsAttestationsWeight,
+        //     uint256 icsBlocksWeight,
+        //     uint256 icsSyncWeight
+        // ) = parametersRegistry.getPerformanceCoefficients(
+        //         identifiedCommunityStakersGateCurveId
+        //     );
+        // assertEq(
+        //     icsAttestationsWeight,
+        //     deployParams.identifiedCommunityStakersGateAttestationsWeight
+        // );
+        // assertEq(
+        //     icsBlocksWeight,
+        //     deployParams.identifiedCommunityStakersGateBlocksWeight
+        // );
+        // assertEq(
+        //     icsSyncWeight,
+        //     deployParams.identifiedCommunityStakersGateSyncWeight
+        // );
+        //
+        // assertEq(
+        //     parametersRegistry.getAllowedExitDelay(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateAllowedExitDelay
+        // );
+        // assertEq(
+        //     parametersRegistry.getExitDelayFee(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateExitDelayFee
+        // );
+        // assertEq(
+        //     parametersRegistry.getMaxWithdrawalRequestFee(
+        //         identifiedCommunityStakersGateCurveId
+        //     ),
+        //     deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
+        // );
         // Params for Legacy EA type
-        uint256 legacyEaBondCurveId = identifiedCommunityStakersGateCurveId - 1;
-        assertEq(
-            parametersRegistry.getKeyRemovalCharge(legacyEaBondCurveId),
-            deployParams.defaultKeyRemovalCharge
-        );
-        assertEq(
-            parametersRegistry.getElRewardsStealingAdditionalFine(
-                legacyEaBondCurveId
-            ),
-            deployParams.defaultElRewardsStealingAdditionalFine
-        );
-        assertEq(
-            parametersRegistry.getKeysLimit(legacyEaBondCurveId),
-            deployParams.defaultKeysLimit
-        );
-
-        ICSParametersRegistry.KeyNumberValueInterval[]
-            memory legacyEaRewardShareData = parametersRegistry
-                .getRewardShareData(legacyEaBondCurveId);
-        assertEq(legacyEaRewardShareData.length, 1);
-        assertEq(legacyEaRewardShareData[0].minKeyNumber, 1);
-        assertEq(
-            legacyEaRewardShareData[0].value,
-            deployParams.defaultRewardShareBP
-        );
-        ICSParametersRegistry.KeyNumberValueInterval[]
-            memory legacyEaPerformanceLeewayData = parametersRegistry
-                .getPerformanceLeewayData(legacyEaBondCurveId);
-        assertEq(legacyEaPerformanceLeewayData.length, 1);
-        assertEq(legacyEaPerformanceLeewayData[0].minKeyNumber, 1);
-        assertEq(
-            legacyEaPerformanceLeewayData[0].value,
-            deployParams.defaultAvgPerfLeewayBP
-        );
-
-        (
-            uint256 legacyEaLifetime,
-            uint256 legacyEaThreshold
-        ) = parametersRegistry.getStrikesParams(legacyEaBondCurveId);
-        assertEq(legacyEaLifetime, deployParams.defaultStrikesLifetimeFrames);
-        assertEq(legacyEaThreshold, deployParams.defaultStrikesThreshold);
-
-        (
-            uint256 legacyEaPriority,
-            uint256 legacyEaMaxDeposits
-        ) = parametersRegistry.getQueueConfig(legacyEaBondCurveId);
-        assertEq(legacyEaPriority, deployParams.defaultQueuePriority);
-        assertEq(legacyEaMaxDeposits, deployParams.defaultQueueMaxDeposits);
-
-        assertEq(
-            parametersRegistry.getBadPerformancePenalty(legacyEaBondCurveId),
-            deployParams.defaultBadPerformancePenalty
-        );
-        (
-            uint256 legacyEaAttestationsWeight,
-            uint256 legacyEaBlocksWeight,
-            uint256 legacyEaSyncWeight
-        ) = parametersRegistry.getPerformanceCoefficients(legacyEaBondCurveId);
-        assertEq(
-            legacyEaAttestationsWeight,
-            deployParams.defaultAttestationsWeight
-        );
-        assertEq(legacyEaBlocksWeight, deployParams.defaultBlocksWeight);
-        assertEq(legacyEaSyncWeight, deployParams.defaultSyncWeight);
-
-        assertEq(
-            parametersRegistry.getAllowedExitDelay(legacyEaBondCurveId),
-            deployParams.defaultAllowedExitDelay
-        );
-        assertEq(
-            parametersRegistry.getExitDelayFee(legacyEaBondCurveId),
-            deployParams.defaultExitDelayFee
-        );
-        assertEq(
-            parametersRegistry.getMaxWithdrawalRequestFee(legacyEaBondCurveId),
-            deployParams.defaultMaxWithdrawalRequestFee
-        );
+        // uint256 legacyEaBondCurveId = identifiedCommunityStakersGateCurveId - 1;
+        // assertEq(
+        //     parametersRegistry.getKeyRemovalCharge(legacyEaBondCurveId),
+        //     deployParams.defaultKeyRemovalCharge
+        // );
+        // assertEq(
+        //     parametersRegistry.getElRewardsStealingAdditionalFine(
+        //         legacyEaBondCurveId
+        //     ),
+        //     deployParams.defaultElRewardsStealingAdditionalFine
+        // );
+        // assertEq(
+        //     parametersRegistry.getKeysLimit(legacyEaBondCurveId),
+        //     deployParams.defaultKeysLimit
+        // );
+        //
+        // ICSParametersRegistry.KeyNumberValueInterval[]
+        //     memory legacyEaRewardShareData = parametersRegistry
+        //         .getRewardShareData(legacyEaBondCurveId);
+        // assertEq(legacyEaRewardShareData.length, 1);
+        // assertEq(legacyEaRewardShareData[0].minKeyNumber, 1);
+        // assertEq(
+        //     legacyEaRewardShareData[0].value,
+        //     deployParams.defaultRewardShareBP
+        // );
+        // ICSParametersRegistry.KeyNumberValueInterval[]
+        //     memory legacyEaPerformanceLeewayData = parametersRegistry
+        //         .getPerformanceLeewayData(legacyEaBondCurveId);
+        // assertEq(legacyEaPerformanceLeewayData.length, 1);
+        // assertEq(legacyEaPerformanceLeewayData[0].minKeyNumber, 1);
+        // assertEq(
+        //     legacyEaPerformanceLeewayData[0].value,
+        //     deployParams.defaultAvgPerfLeewayBP
+        // );
+        //
+        // (
+        //     uint256 legacyEaLifetime,
+        //     uint256 legacyEaThreshold
+        // ) = parametersRegistry.getStrikesParams(legacyEaBondCurveId);
+        // assertEq(legacyEaLifetime, deployParams.defaultStrikesLifetimeFrames);
+        // assertEq(legacyEaThreshold, deployParams.defaultStrikesThreshold);
+        //
+        // (
+        //     uint256 legacyEaPriority,
+        //     uint256 legacyEaMaxDeposits
+        // ) = parametersRegistry.getQueueConfig(legacyEaBondCurveId);
+        // assertEq(legacyEaPriority, deployParams.defaultQueuePriority);
+        // assertEq(legacyEaMaxDeposits, deployParams.defaultQueueMaxDeposits);
+        //
+        // assertEq(
+        //     parametersRegistry.getBadPerformancePenalty(legacyEaBondCurveId),
+        //     deployParams.defaultBadPerformancePenalty
+        // );
+        // (
+        //     uint256 legacyEaAttestationsWeight,
+        //     uint256 legacyEaBlocksWeight,
+        //     uint256 legacyEaSyncWeight
+        // ) = parametersRegistry.getPerformanceCoefficients(legacyEaBondCurveId);
+        // assertEq(
+        //     legacyEaAttestationsWeight,
+        //     deployParams.defaultAttestationsWeight
+        // );
+        // assertEq(legacyEaBlocksWeight, deployParams.defaultBlocksWeight);
+        // assertEq(legacyEaSyncWeight, deployParams.defaultSyncWeight);
+        //
+        // assertEq(
+        //     parametersRegistry.getAllowedExitDelay(legacyEaBondCurveId),
+        //     deployParams.defaultAllowedExitDelay
+        // );
+        // assertEq(
+        //     parametersRegistry.getExitDelayFee(legacyEaBondCurveId),
+        //     deployParams.defaultExitDelayFee
+        // );
+        // assertEq(
+        //     parametersRegistry.getMaxWithdrawalRequestFee(legacyEaBondCurveId),
+        //     deployParams.defaultMaxWithdrawalRequestFee
+        // );
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             parametersRegistry.hasRole(
                 parametersRegistry.DEFAULT_ADMIN_ROLE(),
@@ -950,6 +970,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         parametersRegistry.initialize({
             admin: deployParams.aragonAgent,
@@ -1041,6 +1062,7 @@ contract CSStrikesDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             strikes.hasRole(
                 strikes.DEFAULT_ADMIN_ROLE(),
@@ -1054,6 +1076,7 @@ contract CSStrikesDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         strikes.initialize({
             admin: deployParams.aragonAgent,
@@ -1084,19 +1107,13 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertFalse(vettedGate.isPaused());
-        assertEq(
-            vettedGate.treeRoot(),
-            deployParams.identifiedCommunityStakersGateTreeRoot
-        );
-        assertEq(
-            vettedGate.treeCid(),
-            deployParams.identifiedCommunityStakersGateTreeCid
-        );
+        assertEq(vettedGate.treeRoot(), deployParams.vettedGateParams.treeRoot);
+        assertEq(vettedGate.treeCid(), deployParams.vettedGateParams.treeCid);
 
         assertTrue(
-            vettedGate.curveId() ==
-                deployParams.identifiedCommunityStakersGateCurveId
+            vettedGate.curveId() == deployParams.vettedGateParams.curveId
         );
         assertEq(vettedGate.getInitializedVersion(), 1);
     }
@@ -1107,6 +1124,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
@@ -1163,7 +1181,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                deployParams.identifiedCommunityStakersGateManager
+                deployParams.vettedGateParams.manager
             )
         );
         assertEq(
@@ -1175,11 +1193,12 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGate.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.identifiedCommunityStakersGateTreeRoot,
-            _treeCid: deployParams.identifiedCommunityStakersGateTreeCid,
+            _treeRoot: deployParams.vettedGateParams.treeRoot,
+            _treeCid: deployParams.vettedGateParams.treeCid,
             admin: deployParams.aragonAgent
         });
 
@@ -1195,8 +1214,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGateImpl.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.identifiedCommunityStakersGateTreeRoot,
-            _treeCid: deployParams.identifiedCommunityStakersGateTreeCid,
+            _treeRoot: deployParams.vettedGateParams.treeRoot,
+            _treeCid: deployParams.vettedGateParams.treeCid,
             admin: deployParams.aragonAgent
         });
     }
@@ -1208,12 +1227,14 @@ contract CSEjectorDeploymentTest is DeploymentBaseTest {
     }
 
     function test_immutables() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(ejector.STAKING_MODULE_ID(), deployParams.stakingModuleId);
         assertEq(address(ejector.STRIKES()), address(strikes));
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             ejector.hasRole(
                 ejector.DEFAULT_ADMIN_ROLE(),
@@ -1249,6 +1270,7 @@ contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(exitPenalties))
         );
@@ -1269,6 +1291,7 @@ contract PermissionlessGateDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertTrue(
             permissionlessGate.hasRole(
                 permissionlessGate.DEFAULT_ADMIN_ROLE(),

@@ -3,11 +3,13 @@
 
 pragma solidity 0.8.24;
 
-import { DeployBase } from "./DeployBase.s.sol";
+import { DeployBase, CurveParamsSet, VettedGateParams } from "./DeployBase.s.sol";
 import { GIndices } from "./constants/GIndices.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployMainnet is DeployBase {
+    uint256 internal constant ICS_CURVE_ID = 2;
+
     constructor() DeployBase("mainnet", 1) {
         // Lido addresses
         config.lidoLocatorAddress = 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
@@ -90,39 +92,39 @@ contract DeployMainnet is DeployBase {
         config.defaultMaxWithdrawalRequestFee = 0.1 ether;
 
         // VettedGate
-        config
-            .identifiedCommunityStakersGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.identifiedCommunityStakersGateCurveId = 2;
-        config
-            .identifiedCommunityStakersGateTreeRoot = 0x91545c42adde0f5d82e4c228f81449eab20349c1d31a8538e0468466f93495c5;
-        config
-            .identifiedCommunityStakersGateTreeCid = "bafkreido7ieacbe6nlhdivxfp2gd5kxovofngf6qdmahih4laihm675e2a";
+        config.vettedGateParams = VettedGateParams({
+            manager: 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f, // CSM Committee MS
+            curveId: ICS_CURVE_ID,
+            treeRoot: 0x91545c42adde0f5d82e4c228f81449eab20349c1d31a8538e0468466f93495c5,
+            treeCid: "bafkreido7ieacbe6nlhdivxfp2gd5kxovofngf6qdmahih4laihm675e2a"
+        });
         // 1.5 -> 1.3
-        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
-        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
+        // FIXME
+        // config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        // config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
 
-        // Parameters for Identified Community Staker type
-        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
-        config
-            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
-        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
-        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([1, 500]);
-        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([151, 300]);
-        config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
-        config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
-        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 6;
-        config.identifiedCommunityStakersGateStrikesThreshold = 4;
-        config.identifiedCommunityStakersGateQueuePriority = 0;
-        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
-        config
-            .identifiedCommunityStakersGateBadPerformancePenalty = 0.172 ether;
-        config.identifiedCommunityStakersGateAttestationsWeight = 54;
-        config.identifiedCommunityStakersGateBlocksWeight = 4;
-        config.identifiedCommunityStakersGateSyncWeight = 2;
-        config.identifiedCommunityStakersGateAllowedExitDelay = 5 days;
-        config.identifiedCommunityStakersGateExitDelayFee = 0.05 ether;
-        config
-            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.1 ether;
+        CurveParamsSet memory emptySet;
+        config.extraCurveParams.push(emptySet);
+
+        config.extraCurveParams[0].curveId = ICS_CURVE_ID;
+        config.extraCurveParams[0].keyRemovalCharge = 0.01 ether;
+        config.extraCurveParams[0].ELRewardsStealingAdditionalFine = 0.05 ether;
+        config.extraCurveParams[0].keysLimit = type(uint248).max;
+        config.extraCurveParams[0].avgPerfLeewayData.push([1, 500]);
+        config.extraCurveParams[0].avgPerfLeewayData.push([151, 300]);
+        config.extraCurveParams[0].rewardShareData.push([1, 10000]);
+        config.extraCurveParams[0].rewardShareData.push([17, 5834]);
+        config.extraCurveParams[0].strikesLifetimeFrames = 6;
+        config.extraCurveParams[0].strikesThreshold = 4;
+        config.extraCurveParams[0].queuePriority = 0;
+        config.extraCurveParams[0].queueMaxDeposits = 10;
+        config.extraCurveParams[0].badPerformancePenalty = 0.172 ether;
+        config.extraCurveParams[0].attestationsWeight = 54;
+        config.extraCurveParams[0].blocksWeight = 4;
+        config.extraCurveParams[0].syncWeight = 2;
+        config.extraCurveParams[0].allowedExitDelay = 5 days;
+        config.extraCurveParams[0].exitDelayFee = 0.05 ether;
+        config.extraCurveParams[0].maxWithdrawalRequestFee = 0.1 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;

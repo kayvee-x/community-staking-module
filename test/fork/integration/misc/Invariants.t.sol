@@ -19,13 +19,12 @@ contract InvariantsBase is
     InvariantAsserts
 {
     uint256 adminsCount;
-    DeployParams internal deployParams;
+    Env env;
 
     function setUp() public {
-        Env memory env = envVars();
+        env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }
@@ -46,6 +45,7 @@ contract CSModuleInvariants is InvariantsBase {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -162,6 +162,7 @@ contract CSAccountingInvariants is InvariantsBase {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -248,6 +249,7 @@ contract CSFeeDistributorInvariants is InvariantsBase {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
@@ -276,6 +278,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
     }
 
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -331,6 +334,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
 
 contract HashConsensusInvariant is InvariantsBase {
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -348,6 +352,7 @@ contract HashConsensusInvariant is InvariantsBase {
 
 contract VerifierInvariant is InvariantsBase {
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             verifier.getRoleMemberCount(verifier.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -392,6 +397,7 @@ contract VerifierInvariant is InvariantsBase {
 
 contract EjectorInvariant is InvariantsBase {
     function test_roles() public view {
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         assertEq(
             ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()),
             adminsCount,

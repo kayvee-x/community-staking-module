@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import "forge-std/Script.sol";
+import { Script, VmSafe } from "forge-std/Script.sol";
 
 import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
@@ -34,6 +34,33 @@ import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { CSExitPenalties } from "../src/CSExitPenalties.sol";
 import { IGateSeal } from "../src/interfaces/IGateSeal.sol";
 import { IStakingRouter } from "../src/interfaces/IStakingRouter.sol";
+
+struct VettedGateParams {
+    address manager;
+    uint256 curveId;
+    bytes32 treeRoot;
+    string treeCid;
+}
+
+struct CurveParamsSet {
+    uint256 curveId;
+    uint256 keyRemovalCharge;
+    uint256 ELRewardsStealingAdditionalFine;
+    uint256 keysLimit;
+    uint256[2][] avgPerfLeewayData;
+    uint256[2][] rewardShareData;
+    uint256 strikesLifetimeFrames;
+    uint256 strikesThreshold;
+    uint256 queuePriority;
+    uint256 queueMaxDeposits;
+    uint256 badPerformancePenalty;
+    uint256 attestationsWeight;
+    uint256 blocksWeight;
+    uint256 syncWeight;
+    uint256 allowedExitDelay;
+    uint256 exitDelayFee;
+    uint256 maxWithdrawalRequestFee;
+}
 
 struct DeployParams {
     // Lido addresses
@@ -91,29 +118,9 @@ struct DeployParams {
     uint256 defaultAllowedExitDelay;
     uint256 defaultExitDelayFee;
     uint256 defaultMaxWithdrawalRequestFee;
-    // VettedGate
-    address identifiedCommunityStakersGateManager;
-    uint256 identifiedCommunityStakersGateCurveId;
-    bytes32 identifiedCommunityStakersGateTreeRoot;
-    string identifiedCommunityStakersGateTreeCid;
-    uint256[2][] identifiedCommunityStakersGateBondCurve;
-    // Parameters for Identified Community Staker type
-    uint256 identifiedCommunityStakersGateKeyRemovalCharge;
-    uint256 identifiedCommunityStakersGateELRewardsStealingAdditionalFine;
-    uint256 identifiedCommunityStakersGateKeysLimit;
-    uint256[2][] identifiedCommunityStakersGateAvgPerfLeewayData;
-    uint256[2][] identifiedCommunityStakersGateRewardShareData;
-    uint256 identifiedCommunityStakersGateStrikesLifetimeFrames;
-    uint256 identifiedCommunityStakersGateStrikesThreshold;
-    uint256 identifiedCommunityStakersGateQueuePriority;
-    uint256 identifiedCommunityStakersGateQueueMaxDeposits;
-    uint256 identifiedCommunityStakersGateBadPerformancePenalty;
-    uint256 identifiedCommunityStakersGateAttestationsWeight;
-    uint256 identifiedCommunityStakersGateBlocksWeight;
-    uint256 identifiedCommunityStakersGateSyncWeight;
-    uint256 identifiedCommunityStakersGateAllowedExitDelay;
-    uint256 identifiedCommunityStakersGateExitDelayFee;
-    uint256 identifiedCommunityStakersGateMaxWithdrawalRequestFee;
+    CurveParamsSet[] extraCurveParams;
+    VettedGateParams vettedGateParams;
+    bool deployPermissionlessGate;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -166,28 +173,10 @@ abstract contract DeployBase is Script {
         locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
-    function run(string memory _gitRef) external virtual {
+    function run(string memory _gitRef) external virtual matchingChainId {
+        _checkOracleMembers();
+
         gitRef = _gitRef;
-        if (chainId != block.chainid) {
-            revert ChainIdMismatch({
-                actual: block.chainid,
-                expected: chainId
-            });
-        }
-        HashConsensus accountingConsensus = HashConsensus(
-            BaseOracle(locator.accountingOracle()).getConsensusContract()
-        );
-        (address[] memory members, ) = accountingConsensus.getMembers();
-        uint256 quorum = accountingConsensus.getQuorum();
-        if (block.chainid == 1) {
-            if (
-                keccak256(abi.encode(config.oracleMembers)) !=
-                keccak256(abi.encode(members)) ||
-                config.hashConsensusQuorum != quorum
-            ) {
-                revert HashConsensusMismatch();
-            }
-        }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
 
         vm.startBroadcast();
@@ -302,10 +291,11 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            ICSBondCurve.BondCurveIntervalInput[]
-                memory legacyEaBondCurve = CommonScriptUtils
-                    .arraysToBondCurveIntervalsInputs(config.legacyEaBondCurve);
-            accounting.addBondCurve(legacyEaBondCurve);
+            // TODO: Move to extraBondCurves
+            // ICSBondCurve.BondCurveIntervalInput[]
+            //     memory legacyEaBondCurve = CommonScriptUtils
+            //         .arraysToBondCurveIntervalsInputs(config.legacyEaBondCurve);
+            // accounting.addBondCurve(legacyEaBondCurve);
 
             if (config.extraBondCurves.length > 0) {
                 for (uint256 i = 0; i < config.extraBondCurves.length; i++) {
@@ -318,13 +308,15 @@ abstract contract DeployBase is Script {
                 }
             }
 
-            ICSBondCurve.BondCurveIntervalInput[]
-                memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
-                    .arraysToBondCurveIntervalsInputs(
-                        config.identifiedCommunityStakersGateBondCurve
-                    );
-            uint256 identifiedCommunityStakersGateBondCurveId = accounting
-                .addBondCurve(identifiedCommunityStakersGateBondCurve);
+            // TODO: Move to extraBondCurves
+            // ICSBondCurve.BondCurveIntervalInput[]
+            //     memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+            //         .arraysToBondCurveIntervalsInputs(
+            //             config.identifiedCommunityStakersGateBondCurve
+            //         );
+            // uint256 identifiedCommunityStakersGateBondCurveId = accounting
+            //     .addBondCurve(identifiedCommunityStakersGateBondCurve);
+
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
@@ -386,15 +378,20 @@ abstract contract DeployBase is Script {
 
             strikes.initialize(deployer, address(ejector));
 
-            permissionlessGate = new PermissionlessGate(address(csm), deployer);
+            if (config.deployPermissionlessGate) {
+                permissionlessGate = new PermissionlessGate(
+                    address(csm),
+                    deployer
+                );
+            }
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: identifiedCommunityStakersGateBondCurveId,
-                    treeRoot: config.identifiedCommunityStakersGateTreeRoot,
-                    treeCid: config.identifiedCommunityStakersGateTreeCid,
+                    curveId: config.vettedGateParams.curveId,
+                    treeRoot: config.vettedGateParams.treeRoot,
+                    treeCid: config.vettedGateParams.treeCid,
                     admin: deployer
                 })
             );
@@ -406,63 +403,63 @@ abstract contract DeployBase is Script {
                 vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
             }
 
-            parametersRegistry.setKeyRemovalCharge(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateKeyRemovalCharge
-            );
-            parametersRegistry.setElRewardsStealingAdditionalFine(
-                identifiedCommunityStakersGateBondCurveId,
-                config
-                    .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
-            );
-            parametersRegistry.setKeysLimit(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateKeysLimit
-            );
-            parametersRegistry.setPerformanceLeewayData(
-                identifiedCommunityStakersGateBondCurveId,
-                CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                    config.identifiedCommunityStakersGateAvgPerfLeewayData
-                )
-            );
-            parametersRegistry.setRewardShareData(
-                identifiedCommunityStakersGateBondCurveId,
-                CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                    config.identifiedCommunityStakersGateRewardShareData
-                )
-            );
-            parametersRegistry.setStrikesParams(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateStrikesLifetimeFrames,
-                config.identifiedCommunityStakersGateStrikesThreshold
-            );
-            parametersRegistry.setQueueConfig(
-                identifiedCommunityStakersGateBondCurveId,
-                uint32(config.identifiedCommunityStakersGateQueuePriority),
-                uint32(config.identifiedCommunityStakersGateQueueMaxDeposits)
-            );
-            parametersRegistry.setBadPerformancePenalty(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateBadPerformancePenalty
-            );
-            parametersRegistry.setPerformanceCoefficients(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateAttestationsWeight,
-                config.identifiedCommunityStakersGateBlocksWeight,
-                config.identifiedCommunityStakersGateSyncWeight
-            );
-            parametersRegistry.setAllowedExitDelay(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateAllowedExitDelay
-            );
-            parametersRegistry.setExitDelayFee(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateExitDelayFee
-            );
-            parametersRegistry.setMaxWithdrawalRequestFee(
-                identifiedCommunityStakersGateBondCurveId,
-                config.identifiedCommunityStakersGateMaxWithdrawalRequestFee
-            );
+            for (uint256 i = 0; i < config.extraCurveParams.length; i++) {
+                CurveParamsSet storage set = config.extraCurveParams[i];
+
+                parametersRegistry.setKeyRemovalCharge(
+                    set.curveId,
+                    set.keyRemovalCharge
+                );
+                parametersRegistry.setElRewardsStealingAdditionalFine(
+                    set.curveId,
+                    set.ELRewardsStealingAdditionalFine
+                );
+                parametersRegistry.setKeysLimit(set.curveId, set.keysLimit);
+                parametersRegistry.setPerformanceLeewayData(
+                    set.curveId,
+                    CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                        set.avgPerfLeewayData
+                    )
+                );
+                parametersRegistry.setRewardShareData(
+                    set.curveId,
+                    CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                        set.rewardShareData
+                    )
+                );
+                parametersRegistry.setStrikesParams(
+                    set.curveId,
+                    set.strikesLifetimeFrames,
+                    set.strikesThreshold
+                );
+                parametersRegistry.setQueueConfig(
+                    set.curveId,
+                    uint32(set.queuePriority),
+                    uint32(set.queueMaxDeposits)
+                );
+                parametersRegistry.setBadPerformancePenalty(
+                    set.curveId,
+                    set.badPerformancePenalty
+                );
+                parametersRegistry.setPerformanceCoefficients(
+                    set.curveId,
+                    set.attestationsWeight,
+                    set.blocksWeight,
+                    set.syncWeight
+                );
+                parametersRegistry.setAllowedExitDelay(
+                    set.curveId,
+                    set.allowedExitDelay
+                );
+                parametersRegistry.setExitDelayFee(
+                    set.curveId,
+                    set.exitDelayFee
+                );
+                parametersRegistry.setMaxWithdrawalRequestFee(
+                    set.curveId,
+                    set.maxWithdrawalRequestFee
+                );
+            }
 
             feeDistributor.initialize({
                 admin: address(deployer),
@@ -564,10 +561,12 @@ abstract contract DeployBase is Script {
                 address(vettedGate)
             );
 
-            csm.grantRole(
-                csm.CREATE_NODE_OPERATOR_ROLE(),
-                address(permissionlessGate)
-            );
+            if (config.deployPermissionlessGate) {
+                csm.grantRole(
+                    csm.CREATE_NODE_OPERATOR_ROLE(),
+                    address(permissionlessGate)
+                );
+            }
             csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
             csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -621,18 +620,20 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.identifiedCommunityStakersGateManager
+                config.vettedGateParams.manager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
-            permissionlessGate.grantRole(
-                permissionlessGate.DEFAULT_ADMIN_ROLE(),
-                config.aragonAgent
-            );
-            permissionlessGate.revokeRole(
-                permissionlessGate.DEFAULT_ADMIN_ROLE(),
-                deployer
-            );
+            if (config.deployPermissionlessGate) {
+                permissionlessGate.grantRole(
+                    permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                    config.aragonAgent
+                );
+                permissionlessGate.revokeRole(
+                    permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                    deployer
+                );
+            }
 
             verifier.grantRole(
                 verifier.DEFAULT_ADMIN_ROLE(),
@@ -706,6 +707,21 @@ abstract contract DeployBase is Script {
         vm.stopBroadcast();
     }
 
+    function _checkOracleMembers() internal view skipOnTestnet {
+        HashConsensus accountingConsensus = HashConsensus(
+            BaseOracle(locator.accountingOracle()).getConsensusContract()
+        );
+        (address[] memory members, ) = accountingConsensus.getMembers();
+        uint256 quorum = accountingConsensus.getQuorum();
+        if (
+            keccak256(abi.encode(config.oracleMembers)) !=
+            keccak256(abi.encode(members)) ||
+            config.hashConsensusQuorum != quorum
+        ) {
+            revert HashConsensusMismatch();
+        }
+    }
+
     function _deployProxy(
         address admin,
         address implementation
@@ -748,10 +764,7 @@ abstract contract DeployBase is Script {
             );
     }
 
-    function _grantSecondAdmins() internal {
-        if (keccak256(abi.encodePacked(chainName)) == keccak256("mainnet")) {
-            revert CannotBeUsedInMainnet();
-        }
+    function _grantSecondAdmins() internal forbiddenOnMainnet {
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);
         accounting.grantRole(
             accounting.DEFAULT_ADMIN_ROLE(),
@@ -801,5 +814,30 @@ abstract contract DeployBase is Script {
         return
             IStakingRouter(ILidoLocator(locatorAddress).stakingRouter())
                 .getStakingModulesCount() + 1;
+    }
+
+    modifier matchingChainId() {
+        if (chainId != block.chainid) {
+            revert ChainIdMismatch({
+                actual: block.chainid,
+                expected: chainId
+            });
+        }
+        _;
+    }
+
+    modifier skipOnTestnet() {
+        if (block.chainid != 1) {
+            return;
+        }
+        _;
+    }
+
+    modifier forbiddenOnMainnet() {
+        // `chainId` is 1 in a forked environment, so using `chainName` instead.
+        if (keccak256(abi.encodePacked(chainName)) == keccak256("mainnet")) {
+            revert CannotBeUsedInMainnet();
+        }
+        _;
     }
 }

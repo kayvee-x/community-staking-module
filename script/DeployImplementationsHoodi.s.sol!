@@ -13,11 +13,11 @@ import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { DeploymentHelpers } from "../test/helpers/Fixtures.sol";
-import { DeployHolesky } from "./DeployHolesky.s.sol";
+import { DeployHoodi } from "./DeployHoodi.s.sol";
 
-contract DeployImplementationsHolesky is
+contract DeployImplementationsHoodi is
     DeployImplementationsBase,
-    DeployHolesky,
+    DeployHoodi,
     DeploymentHelpers
 {
     function deploy(
@@ -32,7 +32,7 @@ contract DeployImplementationsHolesky is
             deploymentConfigContent
         );
 
-        csm = CSModule(deploymentConfig.csm);
+        module = CSModule(deploymentConfig.csm);
         earlyAdoption = deploymentConfig.earlyAdoption;
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);

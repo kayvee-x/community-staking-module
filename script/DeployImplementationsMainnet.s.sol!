@@ -32,7 +32,7 @@ contract DeployImplementationsMainnet is
             deploymentConfigContent
         );
 
-        csm = CSModule(deploymentConfig.csm);
+        module = CSModule(deploymentConfig.csm);
         earlyAdoption = deploymentConfig.earlyAdoption;
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
